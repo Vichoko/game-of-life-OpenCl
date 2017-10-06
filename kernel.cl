@@ -14,9 +14,10 @@ __kernel void refresh_life(__global int* livesArrayActual, __global int* livesAr
 		int neighborColumn;
 		int neighborRow;
 		for (int x = -1; x <= 1; x++){
-			for (int y = -1; y <= 1; y++){
+			for (int y = -1; y <= 1; y++){				// only 9 iterations
 				if (x == 0 && y == 0) // itself bypass
 					continue;
+
 				neighborColumn = column+x;
 				neighborRow = row+y;
 
