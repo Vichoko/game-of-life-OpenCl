@@ -4,4 +4,4 @@
 #define COLUMNS 64
 #define FRAMERATE 150
 #define INITIAL_LIVES_FRACTION 0.9
-
+#define THREADS_PER_BLOCK 8

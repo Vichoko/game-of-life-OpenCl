@@ -5,43 +5,41 @@
 // Copyright   : MIT (c) 2017
 // Description : Game of life parallely implemented, using CUDA, C and OpenGL.
 //============================================================================
-
-#include "globals.h"
-
+// ALL
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <time.h>
 #include <signal.h>
 #include <iostream>
-
+// GRAPHICS
 /* Use glew.h instead of gl.h to get all the GL prototypes declared */
 #include <GL/glew.h>
 /* Using SDL2 for the base window and OpenGL context init */
 #include <SDL.h>
-// global constants
 
-// game logic
+// GAME LOGIC
 #ifdef __APPLE__
 #include <OpenCL/opencl.h>
 #else
 #include <CL/cl.h>
 #endif
 
-#include "game_logic.h"
+// INTERFACES
 #include "globals.h"
+#include "controller.h"
+#include "game_logic.h"
+#include "shader_tools.h"
 
 #define MEM_SIZE (128)
 #define MAX_SOURCE_SIZE (0x100000)
 
-#define THREADS_PER_BLOCK 8
-
-// utils
+// SHADER TOOLS
 extern char* file_read(const char* filename);
 extern void print_log(GLuint object);
 extern GLuint create_shader(const char* filename, GLenum type);
 
-
+// GAME LOGIC
 cl_device_id device_id = NULL;
 cl_context context = NULL;
 cl_command_queue command_queue = NULL;
@@ -52,7 +50,7 @@ cl_platform_id platform_id = NULL;
 cl_uint ret_num_devices;
 cl_uint ret_num_platforms;
 cl_int ret;
- 
+
 int* livesArrayActual;
 int N;
 int size;
@@ -60,25 +58,18 @@ int size;
 cl_mem d_livesArrayActual;
 cl_mem d_livesArrayNext;
 
-using namespace std;
-typedef struct {
-	float* array;
-	int total_len;
-	int vertex_len;
-	} container_t;
 
-
-// display
+// CONTROLLER
 GLuint glprogram;
 GLuint vbo_triangle;
 GLuint vao_triangle;
 GLint attribute_coord2d;
 GLint attribute_color;
 
-// vertices + colores
+//vertices + colores
 container_t* vertex_n_colors;
 
-// metricas
+//metricas
 unsigned int iteration_counter = 0;
 double seconds_of_process = 0;
 
@@ -86,6 +77,15 @@ int win_width = WIDTH;
 int win_height = HEIGHT;
 
 using namespace std;
+
+/*************************************************************************************************************************************************************************************/
+/** CONTROLLER **/
+/*************************************************************************************************************************************************************************************/
+/**
+* transforma arreglo de vidas a arreglo de vertices de triangulos con sus respectivos colores para dibujar el juego.
+* Retorna referencia a contenedor con arreglo de vertices + colores e información de longitudes.
+*
+*/
 
 container_t* lives_array_to_bw_squares_vertices() {
 	double start_x = -1;
@@ -399,8 +399,10 @@ int main() {
 	free_opencl_resources();
 	return EXIT_SUCCESS;
 }
-
-
+/*************************************************************************************************************************************************************************************/
+/** GAME LOGIC **//** GAME LOGIC **//** GAME LOGIC **//** GAME LOGIC **//** GAME LOGIC **//** GAME LOGIC **//** GAME LOGIC **//** GAME LOGIC **/
+/*************************************************************************************************************************************************************************************/
+// PRIVATE
 int* generateInitialLives(int seed, int aliveCellsSize){
 	int* cellIndexes = (int*) malloc(sizeof(int)*aliveCellsSize);
 
@@ -429,6 +431,7 @@ void swapLivesArrays(){
 	ret = clSetKernelArg(kernel, 1, sizeof(d_livesArrayActual), (void *)&d_livesArrayActual);
 }
 
+// PUBLIC
 void init_opencl(){
 	FILE *fp;
 	char fileName[] = "./kernel.cl";
@@ -476,6 +479,7 @@ void init_opencl(){
 	int rows = ROWS;
 	int columns = COLUMNS;
 
+	/* Copy to Memory Buffer */
 	clEnqueueWriteBuffer(command_queue, d_livesArrayActual, CL_TRUE, 0, size, livesArrayActual, 0, NULL, NULL);
 	clEnqueueWriteBuffer(command_queue, d_rows, CL_TRUE, 0, sizeof(int), &rows, 0, NULL, NULL);
 	clEnqueueWriteBuffer(command_queue, d_columns, CL_TRUE, 0, sizeof(int), &columns, 0, NULL, NULL);
@@ -493,9 +497,9 @@ void init_opencl(){
 int* init_game_data(){
 	N = COLUMNS*ROWS;
 	size = sizeof(int)*N;
-
+	// alloc space
 	livesArrayActual = (int*) malloc(size);
-
+	// generate first lifes
 	int initialAliveCellsSize = (int) COLUMNS*ROWS*0.3;
 	int* initialAliveCells = generateInitialLives(1, initialAliveCellsSize);
 	for (int i = 0; i < initialAliveCellsSize; i++){
@@ -503,7 +507,7 @@ int* init_game_data(){
 		livesArrayActual[initialAliveCells[i]] = 1;
 	}
 	free(initialAliveCells);
-
+	// init resources as needed
 	init_opencl();
 	return livesArrayActual;
 }
@@ -521,27 +525,29 @@ void free_opencl_resources(){
 
 float kernel_wrapper(){
 	size_t global_item_size = N;
-    size_t local_item_size = THREADS_PER_BLOCK;
-    
-    
-    cl_event event;
-    clock_t start = clock();
+	size_t local_item_size = THREADS_PER_BLOCK;
+	// event for blocking 
+	cl_event event;
+	// time measure
+	clock_t start = clock();
 	ret = clEnqueueNDRangeKernel(command_queue, kernel, 1, NULL, &global_item_size, &local_item_size, 0, NULL, &event);
-	clWaitForEvents(1, &event);
+	clWaitForEvents(1, &event); // blocks until kernels finish
+
 	clock_t end = clock();
-
-
 	double seconds = (float)(end - start) / CLOCKS_PER_SEC;
-
 	return (seconds*1000);
 }
 
 int* fetch_gpu_data(){
-    ret = clEnqueueReadBuffer(command_queue, d_livesArrayNext, CL_TRUE, 0, size, livesArrayActual, 0, NULL, NULL);
-    ret = clEnqueueWriteBuffer(command_queue, d_livesArrayActual, CL_FALSE, 0, size, livesArrayActual, 0, NULL, NULL);
-	//swapLivesArrays();
+	ret = clEnqueueReadBuffer(command_queue, d_livesArrayNext, CL_TRUE, 0, size, livesArrayActual, 0, NULL, NULL);
+	ret = clEnqueueWriteBuffer(command_queue, d_livesArrayActual, CL_FALSE, 0, size, livesArrayActual, 0, NULL, NULL); // workout for swapping
 	return livesArrayActual;
-	}
+}
+
+/*************************************************************************************************************************************************************************************/
+/** SHADER TOOLS **//** SHADER TOOLS **//** SHADER TOOLS **//** SHADER TOOLS **//** SHADER TOOLS **//** SHADER TOOLS **//** SHADER TOOLS **//** SHADER TOOLS **//** SHADER TOOLS **/
+/*************************************************************************************************************************************************************************************/
+
 /**
  * Store all the file's contents in memory, useful to pass shaders
  * source code to OpenGL.  Using SDL_RWops for Android asset support.
