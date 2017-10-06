@@ -63,10 +63,10 @@ int countAliveNeighbors(int* livesArray, int column, int row){
 	*/
 
 
-__kernel void refresh_life(__global int* livesArrayActual, __global int* livesArrayNext){                    
+__kernel void refresh_life(__global int* livesArrayActual, __global int* livesArrayNext, __global int* rows,  __global int* columns){                    
 	int index = get_global_id(0);
-	int COLUMNS = 64;
-	int ROWS = 64;
+	int COLUMNS = *columns;
+	int ROWS = *rows;
 	
 	if (get_global_id(0) < COLUMNS*ROWS){
 		

@@ -343,7 +343,7 @@ void mainLoop(SDL_Window* window) {
 SDL_Window* init_display_stuff() {
 	/* SDL-related initialising functions */
 	SDL_Init (SDL_INIT_VIDEO);
-	SDL_Window* window = SDL_CreateWindow("Game of Life: CUDA",
+	SDL_Window* window = SDL_CreateWindow("Game of Life: OpenCL",
 			SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, win_width,
 			win_height, SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL);
 	SDL_GL_CreateContext(window);
@@ -470,12 +470,21 @@ void init_opencl(){
 	
 	d_livesArrayActual = clCreateBuffer(context, CL_MEM_READ_WRITE, size, NULL, &ret);
 	d_livesArrayNext = clCreateBuffer(context, CL_MEM_READ_WRITE, size, NULL, &ret); 
+	cl_mem d_rows = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(int), NULL, &ret); 
+	cl_mem d_columns = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(int), NULL, &ret); 
+
+	int rows = ROWS;
+	int columns = COLUMNS;
 
 	clEnqueueWriteBuffer(command_queue, d_livesArrayActual, CL_TRUE, 0, size, livesArrayActual, 0, NULL, NULL);
-	 
+	clEnqueueWriteBuffer(command_queue, d_rows, CL_TRUE, 0, sizeof(int), &rows, 0, NULL, NULL);
+	clEnqueueWriteBuffer(command_queue, d_columns, CL_TRUE, 0, sizeof(int), &columns, 0, NULL, NULL);
+	
 	/* Set OpenCL Kernel Parameters */
 	ret = clSetKernelArg(kernel, 0, sizeof(d_livesArrayActual), (void *)&d_livesArrayActual);
 	ret = clSetKernelArg(kernel, 1, sizeof(d_livesArrayNext), (void *)&d_livesArrayNext);
+	ret = clSetKernelArg(kernel, 2, sizeof(d_rows), (void *)&d_rows);
+	ret = clSetKernelArg(kernel, 3, sizeof(d_columns), (void *)&d_columns);
 	
 	free(source_str);
 
