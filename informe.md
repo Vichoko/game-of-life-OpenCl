@@ -140,21 +140,21 @@ int* d_livesArrayNext; // puntero a memoria de GPU con vidas siguientes.
 ```
 
 2. ```cuda.cu```: Provee API:
-	A. ```int* init_game_data()```: 
+	1. ```int* init_game_data()```: 
 		1. Asigna variables del juego en 'Host'.
 		2. Asigna variables del juego en GPU.
 		3. Genera vidas en ```INITIAL_LIVES_FRACTION``` casillas aleatorias (```int* generateInitialLives```).
 		4. Copia vidas iniciales de 'Host' a GPU.
 		5. Retorna puntero a arreglo con celdas vivas (1) y muertas(0) en "Host" ```int* livesArrayActual```.
-	B. ```float kernel_wrapper()```:
+	2. ```float kernel_wrapper()```:
 		1. Ejecuta kernel ```refreshLife``` (de manera bloqueante): Se ejecuta sobre cada celda: Se lanzan COLUMNS*ROWS threads en varios bloques (depende de global ```THREADS_PER_BLOCK```).
 			1. Se calculan cantidad de vecinos vivos. Esto se hace mediante una iteración de 8 pasos y utilizando "if"s (```countAliveNeighbors```).
 			2. Se decide si celda estará viva en siguiente iteración o no, mediante "if"s. 
 		2. Retorna segundos que tardan en completar todos los threads en kernel.
-	C. ```int* fetch_gpu_data()```: Trae a 'Host' nuevas vidas calculadas en GPU y hace swap de referencias en GPU.
+	3. ```int* fetch_gpu_data()```: Trae a 'Host' nuevas vidas calculadas en GPU y hace swap de referencias en GPU.
 		1. Copia resultado de kernel ```int* d_livesArrayNext``` a ```int* livesArrayActual```.
 		2. Hace swap de referencias ```int* d_livesArrayNext``` con ```int* d_livesArrayActual```; para siguiente iteración.
-	D. ```void free_cuda_resources()```: Limpia espacios asignados, etc.
+	4. ```void free_cuda_resources()```: Limpia espacios asignados, etc.
 
 
 Las llamadas a ```kernel_wrapper()``` y ```fetch_gpu_data()``` son de especial importancia porque se llaman en cada frame del juego, es decir, en cada iteración del MainLoop en ```controller.cpp```; y representan el cuello de botella que se quiere optimizar (doble 'for' de versión secuencial).
@@ -212,7 +212,7 @@ void free_opencl_resources(); // call at end
 
 Ahora, la API se describe acorde a las especificaciones de OpenCL:
 
-A. ```int* init_game_data()```: 
+1. ```int* init_game_data()```: 
 	1. Asigna variables del juego en 'Host' (con ```malloc```).
 	2. Genera vidas en ```INITIAL_LIVES_FRACTION``` casillas aleatorias (```int* generateInitialLives```).
 	3. Inicia recursos de OpenCL.
@@ -222,15 +222,15 @@ A. ```int* init_game_data()```:
 		4. Copia variables iniciales de 'Host' a GPU.
 		5. Asigna argumentos para la inminente llamada al kernel.
 	5. Retorna puntero a arreglo con celdas vivas (1) y muertas(0) en "Host".
-B. ```float kernel_wrapper()```:
+2. ```float kernel_wrapper()```:
 	1. Ejecuta kernel ```refresh_life``` (bloqueante): Se ejecuta sobre cada celda: Se lanzan COLUMNS*ROWS threads.
 		1. Se calculan cantidad de vecinos vivos. Esto se hace mediante una iteración de 8 pasos y utilizando "if"s.
 		2. Se decide si celda estará viva en siguiente iteración o no, mediante "if"s. 
 	2. Retorna segundos que tarda en completar todos los threads en kernel.
-C. ```int* fetch_gpu_data()```: Trae a "Host" nuevas vidas calculadas en GPU y hace swap de referencias en GPU.
+3. ```int* fetch_gpu_data()```: Trae a "Host" nuevas vidas calculadas en GPU y hace swap de referencias en GPU.
 	1. Copia resultado de kernel ```int* d_livesArrayNext``` a ```int* livesArrayActual``` (gpu->'host').
 	2. Copia contenido de ```int* livesArrayActual``` a ```int* d_livesArrayActual``` ('host'->gpu), para siguiente iteración.
-D. ```void free_opencl_resources()```: Limpia espacios asignados, etc.
+4. ```void free_opencl_resources()```: Limpia espacios asignados, etc.
 
 ### Variaciones en configuración
 En el archivo ```globals.h``` se pueden configurar variaciones. Las disponibles son:
