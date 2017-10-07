@@ -1,6 +1,9 @@
 # game-of-life-OpenCl
 Game of Life in OpenCL, displayed using C++ and OpenGL.
+
 Detalle de implementación y experimentos en ```../informe.md```.
+
+![runtime image](https://users.dcc.uchile.cl/~voyanede/cc7515/opencl_gol.png)
 
 ## Dependencias
 * GL/glew.h
